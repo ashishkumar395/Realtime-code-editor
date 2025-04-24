@@ -12,6 +12,10 @@ A collaborative, realtime code editor built using React and Socket.io for real-t
 - **Other:** Vercel for deployment, GitHub for version control
 ## Installation:
 
+## Live Demo:
+You can try out the live version of the app here:  
+[Realtime Code Editor - Live Demo](https://realtime-code-editor-eta.vercel.app/)
+
 To run this project locally, follow these steps:
 
 1. Clone the repository:
