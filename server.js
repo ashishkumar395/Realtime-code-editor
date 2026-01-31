@@ -1,30 +1,43 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const { Server } = require("socket.io");
 const ACTIONS = require("./src/Actions");
 
 const app = express();
 const server = http.createServer(app);
 
+/* ✅ Socket.IO with CORS (VERY IMPORTANT) */
 const io = new Server(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+    origin: "*", // allow Vercel
+    methods: ["GET", "POST"],
+  },
 });
 
+/* ✅ Serve React build */
+app.use(express.static(path.join(__dirname, "build")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
+
+/* ✅ Users map */
 const userSocketMap = {};
 
 function getAllConnectedClients(roomId) {
   return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(
-    socketId => ({
+    (socketId) => ({
       socketId,
       username: userSocketMap[socketId],
     })
   );
 }
 
-io.on("connection", socket => {
+/* ✅ Socket events */
+io.on("connection", (socket) => {
+  console.log("✅ Socket connected:", socket.id);
+
   socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
     userSocketMap[socket.id] = username;
     socket.join(roomId);
@@ -40,7 +53,7 @@ io.on("connection", socket => {
   });
 
   socket.on(ACTIONS.CODE_CHANGE, ({ roomId, code }) => {
-    socket.in(roomId).emit(ACTIONS.CODE_CHANGE, { code });
+    socket.to(roomId).emit(ACTIONS.CODE_CHANGE, { code });
   });
 
   socket.on(ACTIONS.SYNC_CODE, ({ socketId, code }) => {
@@ -48,8 +61,8 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnecting", () => {
-    [...socket.rooms].forEach(roomId => {
-      socket.in(roomId).emit(ACTIONS.DISCONNECTED, {
+    [...socket.rooms].forEach((roomId) => {
+      socket.to(roomId).emit(ACTIONS.DISCONNECTED, {
         socketId: socket.id,
         username: userSocketMap[socket.id],
       });
@@ -58,7 +71,8 @@ io.on("connection", socket => {
   });
 });
 
+/* ✅ Railway PORT */
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () =>
-  console.log(`✅ Backend running on ${PORT}`)
-);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
