@@ -1,28 +1,28 @@
-const express = require("express");
-const http = require("http");
-const path = require("path");
-const { Server } = require("socket.io");
-const ACTIONS = require("./src/Actions");
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const { Server } = require('socket.io');
+const ACTIONS = require('./src/Actions');
 
 const app = express();
 const server = http.createServer(app);
 
-/* ✅ Socket.IO with CORS (VERY IMPORTANT) */
+// ✅ IMPORTANT: CORS CONFIG
 const io = new Server(server, {
   cors: {
-    origin: "*", // allow Vercel
-    methods: ["GET", "POST"],
-  },
+    origin: "*", // Vercel domain allow
+    methods: ["GET", "POST"]
+  }
 });
 
-/* ✅ Serve React build */
-app.use(express.static(path.join(__dirname, "build")));
+// ===== Serve React build =====
+app.use(express.static(path.join(__dirname, 'build')));
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-/* ✅ Users map */
+// ===== Socket Logic =====
 const userSocketMap = {};
 
 function getAllConnectedClients(roomId) {
@@ -34,9 +34,8 @@ function getAllConnectedClients(roomId) {
   );
 }
 
-/* ✅ Socket events */
-io.on("connection", (socket) => {
-  console.log("✅ Socket connected:", socket.id);
+io.on('connection', (socket) => {
+  console.log('✅ Socket connected:', socket.id);
 
   socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
     userSocketMap[socket.id] = username;
@@ -60,19 +59,14 @@ io.on("connection", (socket) => {
     io.to(socketId).emit(ACTIONS.CODE_CHANGE, { code });
   });
 
-  socket.on("disconnecting", () => {
-    [...socket.rooms].forEach((roomId) => {
-      socket.to(roomId).emit(ACTIONS.DISCONNECTED, {
-        socketId: socket.id,
-        username: userSocketMap[socket.id],
-      });
-    });
+  socket.on('disconnect', () => {
     delete userSocketMap[socket.id];
+    console.log('❌ Socket disconnected:', socket.id);
   });
 });
 
-/* ✅ Railway PORT */
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, "0.0.0.0", () => {
+// ===== Start Server =====
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
