@@ -1,47 +1,30 @@
 const express = require("express");
 const http = require("http");
-const path = require("path");
 const { Server } = require("socket.io");
 const ACTIONS = require("./src/Actions");
 
 const app = express();
 const server = http.createServer(app);
 
-// Socket.IO
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
-  },
+    methods: ["GET", "POST"]
+  }
 });
 
-// =======================
-// Serve React Build
-// =======================
-const buildPath = path.join(__dirname, "build");
-app.use(express.static(buildPath));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(buildPath, "index.html"));
-});
-
-// =======================
-// Socket Logic
-// =======================
 const userSocketMap = {};
 
 function getAllConnectedClients(roomId) {
   return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(
-    (socketId) => ({
+    socketId => ({
       socketId,
       username: userSocketMap[socketId],
     })
   );
 }
 
-io.on("connection", (socket) => {
-  console.log("🔌 Socket connected:", socket.id);
-
+io.on("connection", socket => {
   socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
     userSocketMap[socket.id] = username;
     socket.join(roomId);
@@ -65,7 +48,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnecting", () => {
-    [...socket.rooms].forEach((roomId) => {
+    [...socket.rooms].forEach(roomId => {
       socket.in(roomId).emit(ACTIONS.DISCONNECTED, {
         socketId: socket.id,
         username: userSocketMap[socket.id],
@@ -75,10 +58,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// =======================
-// Start Server
-// =======================
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () =>
+  console.log(`✅ Backend running on ${PORT}`)
+);
